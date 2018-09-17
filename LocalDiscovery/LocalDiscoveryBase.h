@@ -32,6 +32,9 @@ protected:
 	//Interface function of shutting down
 	virtual void OnShutdown();
 
+	//Interface function of continuing 
+	virtual void OnContinue();
+
 	//Set the service status and report the status to the SCM
 	void SetServiceStatus(DWORD dwCurrentState,
 		DWORD dwWin32ExitCode = NO_ERROR,

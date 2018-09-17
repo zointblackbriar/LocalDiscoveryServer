@@ -4,7 +4,6 @@
 #include <strsafe.h>
 #pragma endregion
 
-#pragma region Static Members
 
 LocalDiscoveryBase *LocalDiscoveryBase::s_service = NULL;
 
@@ -16,6 +15,19 @@ BOOL LocalDiscoveryBase::Run(LocalDiscoveryBase &service)
 	SERVICE_TABLE_ENTRY serviceTable[] = { {service.m_name, ServiceMain}, {NULL, NULL} };
 
 	return StartServiceCtrlDispatcher(serviceTable);
+}
+
+void WINAPI LocalDiscoveryBase::ServiceCtrlHandler(DWORD dwCtrl)
+{
+	switch (dwCtrl)
+	{
+		case SERVICE_CONTROL_STOP: s_service->Stop(); break;
+		case SERVICE_CONTROL_PAUSE: s_service->Pause(); break;
+		case SERVICE_CONTROL_CONTINUE: s_service->Continue(); break;
+		case SERVICE_CONTROL_SHUTDOWN: s_service->Shutdown(); break;
+		case SERVICE_CONTROL_INTERROGATE: break;
+		default: break;
+	}
 }
 
 void WINAPI LocalDiscoveryBase::ServiceMain(DWORD dwArgc, PWSTR *pszArgv)
@@ -66,6 +78,25 @@ LocalDiscoveryBase::~LocalDiscoveryBase(void)
 	//Destructor
 }
 
+void LocalDiscoveryBase::Shutdown()
+{
+	try {
+		OnShutdown();
+		SetServiceStatus(SERVICE_STOPPED);
+
+	} 
+	catch (DWORD dwError)
+	{
+		WriteErrorLogEntry(L"Service Stopped", dwError);
+		SetServiceStatus(SERVICE_STOPPED, dwError);
+	}
+	catch (...)
+	{
+		WriteEventLogEntry(L"Service Force Shutdown.", EVENTLOG_ERROR_TYPE);
+		SetServiceStatus(SERVICE_STOP);
+	}
+}
+
 void LocalDiscoveryBase::Start(DWORD dwArgc, PWSTR *pszArgv)
 {
 	try {
@@ -90,16 +121,12 @@ void LocalDiscoveryBase::Start(DWORD dwArgc, PWSTR *pszArgv)
 	catch (...)
 	{
 		//Log the error
-		WriteEventLogEntry(L"Serviec failed to start.", EVENTLOG_ERROR_TYPE);
+		WriteEventLogEntry(L"Service failed to start.", EVENTLOG_ERROR_TYPE);
 
-		SetServiceStatus(SERVICE_STOPPED);
+		SetServiceStatus(SERVICE_STOP);
 	}
 }
 
-void LocalDiscoveryBase::OnStart(DWORD dwArgc, PWSTR *pszArgv)
-{
-
-}
 
 void LocalDiscoveryBase::Stop()
 {
@@ -127,3 +154,109 @@ void LocalDiscoveryBase::Stop()
 	}
 }
 
+void LocalDiscoveryBase::Pause()
+{
+	try {
+		SetServiceStatus(SERVICE_PAUSE_PENDING);
+		OnPause();
+		SetServiceStatus(SERVICE_PAUSED); // Check SCM
+	}
+	catch (DWORD dwError)
+	{
+		//Log the Error into Windows Event Viewer
+		WriteErrorLogEntry(L"Service Pause", dwError);
+
+		SetServiceStatus(SERVICE_RUNNING);
+	}
+	catch (...)
+	{
+		WriteEventLogEntry(L"Service failed to pause", EVENTLOG_ERROR_TYPE);
+
+		SetServiceStatus(SERVICE_RUNNING);
+	}
+}
+
+void LocalDiscoveryBase::Continue()
+{
+	try
+	{
+		SetServiceStatus(SERVICE_CONTINUE_PENDING);
+		OnContinue();
+		SetServiceStatus(SERVICE_RUNNING);
+	}
+	catch (DWORD dwError)
+	{
+		WriteErrorLogEntry(L"Service continue", dwError);
+		SetServiceStatus(SERVICE_PAUSED);
+	}
+	catch (...)
+	{
+		//Log the error
+		WriteEventLogEntry(L"Service failed to resume", EVENTLOG_ERROR_TYPE);
+
+		SetServiceStatus(SERVICE_PAUSED);
+	}
+}
+
+//Function definition of SetServiceStatus
+void LocalDiscoveryBase::SetServiceStatus(DWORD dwCurrentState,
+										  DWORD dwWin32ExitCode,
+										  DWORD dwWaitHint)
+{
+	static DWORD dwCheckPoint = 1;
+	
+	m_status.dwCurrentState = dwCurrentState;
+	m_status.dwWin32ExitCode = dwWin32ExitCode;
+	m_status.dwWaitHint = dwWaitHint;
+
+	//Check status with regards to services
+	m_status.dwCheckPoint =
+		((dwCurrentState == SERVICE_RUNNING) ||
+		(dwCurrentState == SERVICE_STOPPED)) ?
+		0 : dwCheckPoint++;
+
+	::SetServiceStatus(m_statusHandle, &m_status);
+}
+
+void LocalDiscoveryBase::WriteEventLogEntry(PWSTR pszMessage, WORD wType)
+{
+	HANDLE hEventSource = NULL;
+	//Long Pointer Constant to Wide String i.e L"Hello world"
+	LPCWSTR lpszStrings[2] = { NULL, NULL };
+
+	hEventSource = RegisterEventSource(NULL, m_name);
+	if(hEventSource)
+	{
+		lpszStrings[0] = m_name;
+		lpszStrings[1] = pszMessage;
+
+		ReportEvent(hEventSource,  // Event log handle
+			wType,                 // Event type
+			0,                     // Event category
+			0,                     // Event identifier
+			NULL,                  // No security identifier
+			2,                     // Size of lpszStrings array
+			0,                     // No binary data
+			lpszStrings,           // Array of strings
+			NULL                   // No binary data
+		);
+
+		DeregisterEventSource(hEventSource);
+	}
+}
+
+void LocalDiscoveryBase::WriteErrorLogEntry(PWSTR pszFunction, DWORD dwError)
+{
+	wchar_t szMessage[260];
+	StringCchPrintf(szMessage, ARRAYSIZE(szMessage),
+		L"%s failed w/err 0x%08lx", pszFunction, dwError);
+	WriteEventLogEntry(szMessage, EVENTLOG_ERROR_TYPE);
+}
+	
+
+//Virtual Functions definition
+void LocalDiscoveryBase::OnStart(DWORD dwArgc, PWSTR *pszArgv){}
+void LocalDiscoveryBase::OnPause(){}
+void LocalDiscoveryBase::OnShutdown(){}
+void LocalDiscoveryBase::OnStop(){}
+void LocalDiscoveryBase::OnContinue(){}

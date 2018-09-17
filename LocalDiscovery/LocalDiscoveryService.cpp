@@ -2,8 +2,13 @@
 //
 
 #pragma region Includes
+
 #include "LocalDiscoveryService.h"
 #include "LocalDiscoveryThreadPool.h"
+#include "LocalDiscoveryBase.h"
+#include <stdio.h>
+#include <windows.h>
+
 #pragma endregion
 
 LocalDiscoveryService::LocalDiscoveryService(PWSTR pszServiceName,

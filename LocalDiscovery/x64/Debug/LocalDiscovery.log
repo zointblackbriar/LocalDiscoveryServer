@@ -1,0 +1,11 @@
+﻿  stdafx.cpp
+  ServiceInstallation.cpp
+g:\allfiles\projeler\cplusprojects\localdiscoveryserver\localdiscovery\localdiscovery\serviceinstallation.cpp(106): warning C4477: 'wprintf' : format string '%s' requires an argument of type 'wchar_t *', but variadic argument 1 has type 'SC_HANDLE'
+g:\allfiles\projeler\cplusprojects\localdiscoveryserver\localdiscovery\localdiscovery\serviceinstallation.cpp(110): warning C4477: 'wprintf' : format string '%s' requires an argument of type 'wchar_t *', but variadic argument 1 has type 'SC_HANDLE'
+g:\allfiles\projeler\cplusprojects\localdiscoveryserver\localdiscovery\localdiscovery\serviceinstallation.cpp(117): warning C4477: 'wprintf' : format string '%s' requires an argument of type 'wchar_t *', but variadic argument 1 has type 'SC_HANDLE'
+  MainService.cpp
+  LocalDiscoveryService.cpp
+  LocalDiscoveryBase.cpp
+  Generating Code...
+  LocalDiscovery.vcxproj -> G:\AllFiles\Projeler\CPlusProjects\LocalDiscoveryServer\LocalDiscovery\x64\Debug\LocalDiscovery.exe
+  LocalDiscovery.vcxproj -> G:\AllFiles\Projeler\CPlusProjects\LocalDiscoveryServer\LocalDiscovery\x64\Debug\LocalDiscovery.pdb (Full PDB)

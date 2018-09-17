@@ -11,3 +11,6 @@ void InstallService(PWSTR pszServiceName,
 	PWSTR pszPassword);
 
 void UninstallService(PWSTR pszServiceName);
+
+SC_HANDLE CleanUp(SC_HANDLE param_SCMManager, SC_HANDLE param_sService);
+
